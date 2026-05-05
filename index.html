@@ -367,7 +367,7 @@ async function ensureSheets() {
     if(s.properties.title===TAB_APPS)sheetMeta.appsId=s.properties.sheetId;
     if(s.properties.title===TAB_CON) sheetMeta.conId =s.properties.sheetId;
   });
-  await maybeHeaders(TAB_APPS,['ID','Company','Role','Location','Salary','DateApplied','Status']);
+  await maybeHeaders(TAB_APPS,['ID','Company','Role','Location','Salary','DateApplied','Status','SourceLink','Notes','JobDescription']);
   await maybeHeaders(TAB_CON, ['AppID','Name','TeamTitle','Email','Location','School','LastEvent','LastDate','Cell','Notes']);
 }
 
@@ -383,7 +383,7 @@ async function loadAll() {
       api('GET',`/values/${enc(TAB_APPS+'!A2:G2000')}`),
       api('GET',`/values/${enc(TAB_CON+'!A2:J2000')}`)
     ]);
-    apps=(ar.values||[]).map(r=>({id:parseInt(r[0])||0,company:r[1]||'',role:r[2]||'',location:r[3]||'',salary:r[4]||'',dateApplied:r[5]||'',status:r[6]||'Applied'}));
+    apps=(ar.values||[]).map(r=>({id:parseInt(r[0])||0,company:r[1]||'',role:r[2]||'',location:r[3]||'',salary:r[4]||'',dateApplied:r[5]||'',status:r[6]||'Applied',sourceLink:r[7]||'',notes:r[8]||'',jobDescription:r[9]||''}));
     contacts=(cr.values||[]).map(r=>({appId:parseInt(r[0])||0,name:r[1]||'',teamTitle:r[2]||'',email:r[3]||'',location:r[4]||'',school:r[5]||'',lastEvent:r[6]||'',lastDate:r[7]||'',cell:r[8]||'',notes:r[9]||''}));
     nextAppId=apps.length?Math.max(...apps.map(a=>a.id))+1:1;
     setSynced(); renderAll();
@@ -391,11 +391,11 @@ async function loadAll() {
 }
 
 async function appendApp(app) {
-  await api('POST',`/values/${enc(TAB_APPS+'!A:G')}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`,{values:[[app.id,app.company,app.role,app.location,app.salary,app.dateApplied,app.status]]});
+  await api('POST',`/values/${enc(TAB_APPS+'!A:J')}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`,{values:[[app.id,app.company,app.role,app.location,app.salary,app.dateApplied,app.status,app.sourceLink,app.notes,app.jobDescription]]});
 }
 async function updateApp(app) {
   const row=apps.findIndex(a=>a.id===app.id)+2;
-  await api('PUT',`/values/${enc(TAB_APPS+'!A'+row+':G'+row)}?valueInputOption=RAW`,{values:[[app.id,app.company,app.role,app.location,app.salary,app.dateApplied,app.status]]});
+  await api('PUT',`/values/${enc(TAB_APPS+'!A'+row+':J'+row)}?valueInputOption=RAW`,{values:[[app.id,app.company,app.role,app.location,app.salary,app.dateApplied,app.status,app.sourceLink,app.notes,app.jobDescription]]});
 }
 async function deleteAppRow(appId) {
   const row=apps.findIndex(a=>a.id===appId)+2;
@@ -418,7 +418,7 @@ async function saveApp() {
   syncTC();
   const company=$('f-company').value.trim();
   if(!company){$('f-company').focus();return;}
-  const obj={id:editingId||nextAppId++,company,role:$('f-role').value.trim(),location:$('f-location').value.trim(),salary:$('f-salary').value.trim(),dateApplied:$('f-date').value,status:$('f-status').value};
+  const obj={id:editingId||nextAppId++,company,role:$('f-role').value.trim(),location:$('f-location').value.trim(),salary:$('f-salary').value.trim(),dateApplied:$('f-date').value,status:$('f-status').value,sourceLink:$('f-source').value.trim(),notes:$('f-notes').value.trim(),jobDescription:$('f-jd').value.trim()};
   const savingCons=tempContacts.filter(c=>c.name.trim());
   $('save-btn').disabled=true; $('save-btn').textContent='Saving…'; setSyncing();
   try {
@@ -523,6 +523,9 @@ function renderDrawer(a){
         <div class="meta-item"><div class="meta-key">Date applied</div><div class="meta-val">${fmtDate(a.dateApplied)}</div></div>
         <div class="meta-item"><div class="meta-key">Location</div><div class="meta-val">${esc(a.location)||'—'}</div></div>
         <div class="meta-item"><div class="meta-key">Indicated salary</div><div class="meta-val">${esc(a.salary)||'—'}</div></div>
+        <div class="meta-item full"><div class="meta-key">Source / link</div><div class="meta-val">${a.sourceLink?`<a href="${esc(a.sourceLink)}" target="_blank" style="color:var(--blue);text-decoration:none;font-size:13px">${esc(a.sourceLink)}</a>`:'—'}</div></div>
+        ${a.notes?`<div class="meta-item full"><div class="meta-key">Notes</div><div class="meta-val" style="font-weight:400;font-size:13px;color:var(--text2)">${esc(a.notes)}</div></div>`:''}
+        ${a.jobDescription?`<div class="meta-item full"><div class="meta-key">Job description</div><div class="meta-val" style="font-weight:400;font-size:12px;color:var(--text2);white-space:pre-wrap;line-height:1.6">${esc(a.jobDescription)}</div></div>`:''}
       </div>
     </div>
     <div class="drawer-section">
@@ -592,6 +595,15 @@ function openModal(title,app){
       <div class="field"><label>Location</label><input type="text" id="f-location" value="${esc(app?.location||'')}" placeholder="e.g. Hong Kong"/></div>
       <div class="field"><label>Indicated salary</label><input type="text" id="f-salary" value="${esc(app?.salary||'')}" placeholder="e.g. HKD 600K–800K"/></div>
       <div class="field"><label>Date applied</label><input type="date" id="f-date" value="${esc(app?.dateApplied||'')}"/></div>
+    </div>
+    <div class="form-row single" style="margin-bottom:12px">
+      <div class="field"><label>Source / link</label><input type="url" id="f-source" value="${esc(app?.sourceLink||'')}" placeholder="e.g. https://linkedin.com/jobs/…"/></div>
+    </div>
+    <div class="form-row single" style="margin-bottom:12px">
+      <div class="field"><label>Notes</label><textarea id="f-notes" placeholder="General notes about this opportunity…">${esc(app?.notes||'')}</textarea></div>
+    </div>
+    <div class="form-row single" style="margin-bottom:12px">
+      <div class="field"><label>Job description</label><textarea id="f-jd" style="min-height:100px" placeholder="Paste the job description here…">${esc(app?.jobDescription||'')}</textarea></div>
     </div>
     <div class="form-row single" style="margin-bottom:0">
       <div class="field"><label>Status</label><select id="f-status">${STATUSES.map(s=>`<option value="${s}"${app?.status===s?' selected':''}>${s}</option>`).join('')}</select></div>
