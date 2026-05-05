@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Pipeline — Job CRM</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#f7f6f3;--surface:#fff;--surface2:#f1f0ec;
+  --border:#e4e2db;--border2:#d0cec5;
+  --text:#1a1916;--text2:#6b6960;--text3:#a09e97;
+  --blue:#2563eb;--blue-bg:#eff6ff;--blue-text:#1d4ed8;
+  --green:#16a34a;--green-bg:#f0fdf4;--green-text:#15803d;
+  --amber:#d97706;--amber-bg:#fffbeb;--amber-text:#b45309;
+  --red:#dc2626;--red-bg:#fef2f2;--red-text:#b91c1c;
+  --gray-bg:#f4f4f5;--gray-text:#52525b;
+  --radius:8px;--radius-lg:12px;--sidebar:228px;
+  --shadow:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;min-height:100vh}
+#auth-screen{min-height:100vh;display:flex;align-items:center;justify-content:center}
+.auth-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:52px 44px;text-align:center;width:400px;box-shadow:0 4px 24px rgba(0,0,0,.07)}
+.auth-logo{font-size:22px;font-weight:500;letter-spacing:-.4px;margin-bottom:6px;display:flex;align-items:center;justify-content:center;gap:8px}
+.auth-logo-dot{width:9px;height:9px;border-radius:50%;background:var(--text)}
+.auth-sub{font-size:13px;color:var(--text3);margin-bottom:36px;line-height:1.6}
+.google-btn{display:inline-flex;align-items:center;gap:10px;padding:11px 22px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);font-size:14px;font-family:'DM Sans',sans-serif;color:var(--text);cursor:pointer;transition:all .15s;font-weight:500;width:100%;justify-content:center}
+.google-btn:hover{background:var(--surface2);border-color:var(--border2)}
+.google-btn svg{width:18px;height:18px;flex-shrink:0}
+.auth-note{margin-top:20px;font-size:11px;color:var(--text3)}
+.auth-error{margin-top:12px;font-size:12px;color:var(--red-text);min-height:16px}
+#loading{position:fixed;inset:0;background:var(--bg);z-index:100;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px}
+.spinner{width:26px;height:26px;border:2px solid var(--border);border-top-color:var(--text);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-text{font-size:13px;color:var(--text3)}
+#app-shell{display:none;min-height:100vh}
+#app-shell.on{display:flex}
+.sidebar{width:var(--sidebar);min-height:100vh;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:10}
+.sidebar-logo{padding:20px 18px 16px;border-bottom:1px solid var(--border);font-size:15px;font-weight:500;letter-spacing:-.3px;display:flex;align-items:center;gap:8px}
+.logo-dot{width:8px;height:8px;border-radius:50%;background:var(--text)}
+.sidebar-nav{padding:12px 10px;flex:1}
+.nav-item{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:var(--radius);cursor:pointer;color:var(--text2);font-size:13px;transition:all .15s;margin-bottom:2px;border:none;background:none;width:100%;text-align:left;font-family:'DM Sans',sans-serif}
+.nav-item:hover{background:var(--surface2);color:var(--text)}
+.nav-item.active{background:var(--text);color:#fff}
+.nav-icon{width:15px;height:15px;flex-shrink:0}
+.sidebar-footer{padding:12px 10px;border-top:1px solid var(--border)}
+.sidebar-stat{padding:5px 10px;font-size:12px;color:var(--text3);display:flex;justify-content:space-between}
+.sidebar-stat span:last-child{font-weight:500;color:var(--text2);font-family:'DM Mono',monospace}
+.signout-btn{display:flex;align-items:center;gap:8px;width:100%;padding:8px 10px;border-radius:var(--radius);border:none;background:none;font-size:12px;color:var(--text3);cursor:pointer;font-family:'DM Sans',sans-serif;margin-top:6px;transition:all .15s}
+.signout-btn:hover{background:var(--surface2);color:var(--text2)}
+.user-row{display:flex;align-items:center;gap:8px;padding:8px 10px;margin-bottom:2px}
+.user-avatar{width:26px;height:26px;border-radius:50%;background:var(--surface2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;color:var(--text2);flex-shrink:0}
+.user-name{font-size:12px;color:var(--text2);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.main{margin-left:var(--sidebar);flex:1;display:flex;flex-direction:column;min-height:100vh}
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 28px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:5}
+.page-title{font-size:15px;font-weight:500}
+.topbar-right{display:flex;align-items:center;gap:10px}
+.search-wrap{position:relative}
+.search-wrap input{padding:7px 12px 7px 32px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface2);font-size:13px;font-family:'DM Sans',sans-serif;color:var(--text);width:240px;outline:none;transition:all .15s}
+.search-wrap input:focus{border-color:var(--border2);background:#fff}
+.search-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);pointer-events:none}
+.btn{padding:7px 14px;border-radius:var(--radius);font-size:13px;font-family:'DM Sans',sans-serif;font-weight:500;cursor:pointer;transition:all .15s;border:1px solid transparent}
+.btn-primary{background:var(--text);color:#fff}
+.btn-primary:hover{opacity:.85}
+.btn-ghost{background:none;border-color:var(--border);color:var(--text2)}
+.btn-ghost:hover{background:var(--surface2);color:var(--text)}
+.btn-danger{background:none;border-color:#fca5a5;color:var(--red-text)}
+.btn-danger:hover{background:var(--red-bg)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.content{padding:24px 28px;flex:1}
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:18px 20px;box-shadow:var(--shadow)}
+.stat-label{font-size:12px;color:var(--text3);margin-bottom:6px}
+.stat-value{font-size:26px;font-weight:500;font-family:'DM Mono',monospace;color:var(--text)}
+.stat-sub{font-size:12px;color:var(--text3);margin-top:4px}
+.filter-bar{display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.filter-chip{padding:5px 12px;border-radius:20px;font-size:12px;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--text2);transition:all .15s;font-family:'DM Sans',sans-serif}
+.filter-chip:hover{border-color:var(--border2);color:var(--text)}
+.filter-chip.active{background:var(--text);color:#fff;border-color:var(--text)}
+.table-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow);overflow:hidden}
+.table-header{padding:13px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.table-count{font-size:12px;color:var(--text3)}
+.sync-status{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text3)}
+.sync-dot{width:6px;height:6px;border-radius:50%;background:var(--green);flex-shrink:0}
+.sync-dot.syncing{background:var(--amber);animation:pulse 1s infinite}
+.sync-dot.error{background:var(--red)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.table-scroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse;min-width:860px}
+thead th{padding:9px 14px;text-align:left;font-size:11px;font-weight:500;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;background:var(--surface2);border-bottom:1px solid var(--border);white-space:nowrap}
+tbody td{padding:11px 14px;border-bottom:1px solid var(--border);vertical-align:middle;font-size:13px}
+tbody tr:last-child td{border-bottom:none}
+tbody tr{cursor:pointer;transition:background .1s}
+tbody tr:hover td{background:#faf9f7}
+.company-cell{display:flex;align-items:center;gap:10px}
+.company-avatar{width:30px;height:30px;border-radius:7px;background:var(--surface2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;color:var(--text2);flex-shrink:0;font-family:'DM Mono',monospace}
+.company-name{font-weight:500;font-size:13px;white-space:nowrap}
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:500;white-space:nowrap}
+.badge::before{content:'';width:5px;height:5px;border-radius:50%;background:currentColor;opacity:.6;flex-shrink:0}
+.badge-Applied{background:var(--blue-bg);color:var(--blue-text)}
+.badge-Interview{background:var(--green-bg);color:var(--green-text)}
+.badge-Offer{background:var(--amber-bg);color:var(--amber-text)}
+.badge-Rejected{background:var(--red-bg);color:var(--red-text)}
+.badge-No-response{background:var(--gray-bg);color:var(--gray-text)}
+.contact-pill{display:inline-block;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:2px 8px;font-size:11px;color:var(--text2);margin:2px 2px 2px 0;white-space:nowrap}
+.action-cell{display:flex;gap:5px;opacity:0;transition:opacity .15s}
+tbody tr:hover .action-cell{opacity:1}
+.icon-btn{width:26px;height:26px;border-radius:6px;border:1px solid var(--border);background:var(--surface);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s;color:var(--text2)}
+.icon-btn:hover{background:var(--surface2)}
+.icon-btn.del:hover{background:var(--red-bg);border-color:#fca5a5;color:var(--red-text)}
+.empty-state{padding:52px 20px;text-align:center}
+.empty-title{font-size:15px;font-weight:500;color:var(--text2);margin-bottom:6px}
+.empty-sub{font-size:13px;color:var(--text3)}
+.kanban{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;align-items:start}
+.kanban-col{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden}
+.kanban-col-header{padding:11px 13px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.kanban-col-name{font-size:12px;font-weight:500;color:var(--text2)}
+.kanban-count{font-size:11px;color:var(--text3);background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:1px 7px;font-family:'DM Mono',monospace}
+.kanban-cards{padding:8px;display:flex;flex-direction:column;gap:7px;min-height:60px}
+.kanban-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:11px 12px;cursor:pointer;transition:all .15s}
+.kanban-card:hover{border-color:var(--border2)}
+.kanban-card-company{font-size:13px;font-weight:500;color:var(--text);margin-bottom:1px}
+.kanban-card-role{font-size:12px;color:var(--text3);margin-bottom:7px}
+.kanban-card-footer{display:flex;align-items:center;justify-content:space-between}
+.kanban-card-date{font-size:11px;color:var(--text3);font-family:'DM Mono',monospace}
+.kanban-card-contacts{font-size:11px;color:var(--text3)}
+.drawer-overlay{position:fixed;inset:0;background:rgba(0,0,0,.18);z-index:20;display:none}
+.drawer-overlay.open{display:flex}
+.drawer-spacer{flex:1;cursor:pointer}
+.drawer{width:500px;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;height:100vh;overflow:hidden;animation:slideIn .2s ease}
+@keyframes slideIn{from{transform:translateX(30px);opacity:0}to{transform:translateX(0);opacity:1}}
+.drawer-top{padding:20px 24px 16px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.drawer-company{font-size:18px;font-weight:500;margin-bottom:3px}
+.drawer-role{font-size:13px;color:var(--text2)}
+.close-btn{width:28px;height:28px;border-radius:6px;border:1px solid var(--border);background:none;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text2);flex-shrink:0;margin-top:2px}
+.close-btn:hover{background:var(--surface2)}
+.drawer-body{flex:1;overflow-y:auto;padding:20px 24px}
+.drawer-section{margin-bottom:24px}
+.drawer-section-title{font-size:11px;font-weight:500;color:var(--text3);letter-spacing:.07em;text-transform:uppercase;margin-bottom:10px}
+.meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}
+.meta-item{padding:7px 0;border-bottom:1px solid var(--border)}
+.meta-item.full{grid-column:1/-1}
+.meta-key{font-size:11px;color:var(--text3);margin-bottom:2px}
+.meta-val{font-size:13px;color:var(--text);font-weight:500}
+.contact-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:10px}
+.contact-card-name{font-size:14px;font-weight:500;color:var(--text);margin-bottom:2px}
+.contact-card-title{font-size:12px;color:var(--text3);margin-bottom:10px}
+.contact-card-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.contact-field-label{font-size:11px;color:var(--text3);margin-bottom:2px}
+.contact-field-val{font-size:12px;color:var(--text2)}
+.contact-note-box{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:9px 11px;font-size:12px;color:var(--text2);font-style:italic;line-height:1.6}
+.drawer-footer{padding:14px 24px;border-top:1px solid var(--border);display:flex;gap:8px}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.25);z-index:30;display:none;align-items:flex-start;justify-content:center;padding:32px 20px;overflow-y:auto}
+.modal-overlay.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);width:640px;max-width:100%;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.12);animation:modalIn .18s ease;margin:auto}
+@keyframes modalIn{from{transform:scale(.97) translateY(8px);opacity:0}to{transform:scale(1) translateY(0);opacity:1}}
+.modal-header{padding:20px 24px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.modal-title{font-size:15px;font-weight:500}
+.modal-body{padding:20px 24px;overflow-y:auto;max-height:70vh}
+.modal-footer-bar{padding:14px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;flex-shrink:0}
+.section-label{font-size:11px;font-weight:500;color:var(--text3);letter-spacing:.07em;text-transform:uppercase;margin-bottom:12px;margin-top:4px}
+.form-divider{border:none;border-top:1px solid var(--border);margin:18px 0 16px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.form-row.three{grid-template-columns:1fr 1fr 1fr}
+.form-row.single{grid-template-columns:1fr}
+.field label{display:block;font-size:12px;color:var(--text2);margin-bottom:4px;font-weight:500}
+.field input,.field select,.field textarea{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;font-family:'DM Sans',sans-serif;color:var(--text);background:var(--surface);outline:none;transition:border-color .15s}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--border2)}
+.field textarea{resize:vertical;min-height:68px;line-height:1.5}
+.contact-form-block{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:10px}
+.contact-form-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.contact-form-num{font-size:11px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.05em}
+.remove-contact{font-size:12px;color:var(--red-text);background:none;border:none;cursor:pointer;padding:0;font-family:'DM Sans',sans-serif}
+.remove-contact:hover{text-decoration:underline}
+.add-contact-btn{font-size:12px;color:var(--blue);background:none;border:1px dashed var(--border2);border-radius:var(--radius);padding:8px 12px;cursor:pointer;width:100%;text-align:left;transition:all .15s;font-family:'DM Sans',sans-serif;margin-top:2px}
+.add-contact-btn:hover{border-color:var(--blue);background:var(--blue-bg)}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+</style>
+</head>
+<body>
+
+<div id="loading"><div class="spinner"></div><div class="loading-text">Loading Pipeline…</div></div>
+
+<div id="auth-screen" style="display:none">
+  <div class="auth-card">
+    <div class="auth-logo"><div class="auth-logo-dot"></div>Pipeline</div>
+    <div class="auth-sub">Your job search CRM.<br>All data saved to your Google Sheets.</div>
+    <button class="google-btn" onclick="signIn()">
+      <svg viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908C16.658 14.013 17.64 11.71 17.64 9.2z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z"/><path fill="#FBBC05" d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"/></svg>
+      Sign in with Google
+    </button>
+    <div class="auth-note">Only authorized Google accounts can access this app.</div>
+    <div class="auth-error" id="auth-error"></div>
+  </div>
+</div>
+
+<div id="app-shell">
+  <aside class="sidebar">
+    <div class="sidebar-logo"><div class="logo-dot"></div>Pipeline</div>
+    <nav class="sidebar-nav">
+      <button class="nav-item active" id="nav-list" onclick="setView('list')">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="12" height="2" rx="1"/><rect x="2" y="7" width="12" height="2" rx="1"/><rect x="2" y="11" width="12" height="2" rx="1"/></svg>
+        All applications
+      </button>
+      <button class="nav-item" id="nav-kanban" onclick="setView('kanban')">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="2" width="4" height="12" rx="1.5"/><rect x="6" y="2" width="4" height="8" rx="1.5"/><rect x="11" y="2" width="4" height="10" rx="1.5"/></svg>
+        Board view
+      </button>
+    </nav>
+    <div class="sidebar-footer">
+      <div id="sidebar-stats"></div>
+      <div class="user-row">
+        <div class="user-avatar" id="user-avatar">?</div>
+        <div class="user-name" id="user-name"></div>
+      </div>
+      <button class="signout-btn" onclick="signOut()">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 2H3a1 1 0 00-1 1v10a1 1 0 001 1h3M11 11l3-3-3-3M14 8H6"/></svg>
+        Sign out
+      </button>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <span class="page-title" id="page-title">All applications</span>
+      <div class="topbar-right">
+        <div class="search-wrap">
+          <svg class="search-icon" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="7" cy="7" r="5"/><path d="M12 12l2.5 2.5"/></svg>
+          <input type="text" id="search-input" placeholder="Search companies, roles, contacts…" oninput="renderAll()"/>
+        </div>
+        <button class="btn btn-primary" onclick="openAdd()">+ New application</button>
+      </div>
+    </header>
+    <div class="content">
+      <div class="stats-row" id="stats-row"></div>
+      <div id="view-list">
+        <div class="filter-bar" id="filter-bar"></div>
+        <div class="table-card">
+          <div class="table-header">
+            <span class="table-count" id="table-count"></span>
+            <div class="sync-status"><div class="sync-dot" id="sync-dot"></div><span id="sync-text">Synced</span></div>
+          </div>
+          <div class="table-scroll">
+            <table>
+              <thead><tr>
+                <th>Company</th><th>Role</th><th>Location</th><th>Salary</th><th>Contacts</th><th>Applied</th><th>Status</th><th></th>
+              </tr></thead>
+              <tbody id="table-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div id="view-kanban" style="display:none"><div class="kanban" id="kanban-board"></div></div>
+    </div>
+  </div>
+</div>
+
+<div class="drawer-overlay" id="drawer-overlay">
+  <div class="drawer-spacer" onclick="closeDrawer()"></div>
+  <div class="drawer">
+    <div class="drawer-top">
+      <div><div class="drawer-company" id="d-company"></div><div class="drawer-role" id="d-role"></div></div>
+      <button class="close-btn" onclick="closeDrawer()"><svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1 1l10 10M11 1L1 11"/></svg></button>
+    </div>
+    <div class="drawer-body" id="d-body"></div>
+    <div class="drawer-footer">
+      <button class="btn btn-ghost" onclick="editFromDrawer()">Edit</button>
+      <button class="btn btn-danger" onclick="deleteFromDrawer()">Delete</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-overlay" onclick="handleModalBg(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="modal-title">New application</span>
+      <button class="close-btn" onclick="closeModal()"><svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1 1l10 10M11 1L1 11"/></svg></button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-footer-bar">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" id="save-btn" onclick="saveApp()">Save to Sheets</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://accounts.google.com/gsi/client" async defer onload="onGsiLoad()"></script>
+<script>
+const CLIENT_ID = '178169561432-u58vmk1r6s59jq3fmjdole1jre512fbo.apps.googleusercontent.com';
+const SHEET_ID  = '1BYa3BiK41pjuTU_7R56C9GJrDOj7UzhAxpW141CIMTM';
+const SCOPES    = 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/oauth2/auth/userinfo.profile';
+const TAB_APPS  = 'Applications';
+const TAB_CON   = 'Contacts';
+const STATUSES  = ['Applied','Interview','Offer','Rejected','No response'];
+
+let apps=[], contacts=[], nextAppId=1;
+let editingId=null, drawerAppId=null, tempContacts=[];
+let activeFilter='', currentView='list';
+let accessToken=null, tokenClient=null, sheetMeta={};
+
+const $  = id => document.getElementById(id);
+const esc = s => s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : '';
+const ini = s => s ? s.trim().split(/\s+/).slice(0,2).map(w=>w[0]).join('').toUpperCase() : '?';
+const fmtDate = d => { if(!d)return'—'; const p=d.split('-'); if(p.length<3)return d; const mo=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; return `${mo[parseInt(p[1])-1]} ${parseInt(p[2])}, ${p[0]}`; };
+const conFor = id => contacts.filter(c=>c.appId===id);
+const bdg = s => 'badge-'+s.replace(/\s+/g,'-');
+const setSyncing = () => { $('sync-dot').className='sync-dot syncing'; $('sync-text').textContent='Syncing…'; };
+const setSynced  = () => { $('sync-dot').className='sync-dot'; $('sync-text').textContent='Synced'; };
+const setSyncErr = () => { $('sync-dot').className='sync-dot error'; $('sync-text').textContent='Sync error'; };
+
+function onGsiLoad() {
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: CLIENT_ID, scope: SCOPES,
+    callback: async resp => {
+      if (resp.error) { $('auth-error').textContent='Auth error: '+resp.error; return; }
+      accessToken = resp.access_token;
+      loadUserInfo();
+      showApp();
+      await ensureSheets();
+      await loadAll();
+    }
+  });
+  $('loading').style.display='none';
+  $('auth-screen').style.display='';
+}
+
+function signIn() { tokenClient.requestAccessToken({prompt:'consent'}); }
+function signOut() {
+  try { google.accounts.oauth2.revoke(accessToken,()=>{}); } catch(e){}
+  accessToken=null; apps=[]; contacts=[];
+  $('app-shell').classList.remove('on');
+  $('auth-screen').style.display='';
+}
+
+async function loadUserInfo() {
+  try {
+    const r = await fetch('https://www.googleapis.com/oauth2/v2/userinfo',{headers:{Authorization:'Bearer '+accessToken}});
+    const u = await r.json();
+    $('user-name').textContent = u.given_name||u.name||'You';
+    $('user-avatar').textContent = ini(u.name||'U');
+  } catch(e){}
+}
+
+function showApp() { $('auth-screen').style.display='none'; $('app-shell').classList.add('on'); }
+
+async function api(method, path, body) {
+  const url=`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}${path}`;
+  const res=await fetch(url,{method,headers:{Authorization:'Bearer '+accessToken,'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});
+  if(!res.ok){const e=await res.json().catch(()=>({}));throw new Error(e.error?.message||res.statusText);}
+  return res.status===204?null:res.json();
+}
+const enc = s => encodeURIComponent(s);
+
+async function ensureSheets() {
+  const meta=await api('GET','?fields=sheets.properties');
+  const titles=meta.sheets.map(s=>s.properties.title);
+  const reqs=[];
+  if(!titles.includes(TAB_APPS))reqs.push({addSheet:{properties:{title:TAB_APPS}}});
+  if(!titles.includes(TAB_CON)) reqs.push({addSheet:{properties:{title:TAB_CON}}});
+  if(reqs.length)await api('POST',':batchUpdate',{requests:reqs});
+  const meta2=await api('GET','?fields=sheets.properties');
+  meta2.sheets.forEach(s=>{
+    if(s.properties.title===TAB_APPS)sheetMeta.appsId=s.properties.sheetId;
+    if(s.properties.title===TAB_CON) sheetMeta.conId =s.properties.sheetId;
+  });
+  await maybeHeaders(TAB_APPS,['ID','Company','Role','Location','Salary','DateApplied','Status']);
+  await maybeHeaders(TAB_CON, ['AppID','Name','TeamTitle','Email','Location','School','LastEvent','LastDate','Cell','Notes']);
+}
+
+async function maybeHeaders(tab,headers) {
+  const r=await api('GET',`/values/${enc(tab+'!A1:Z1')}`);
+  if(!r.values?.length)await api('PUT',`/values/${enc(tab+'!A1')}?valueInputOption=RAW`,{values:[headers]});
+}
+
+async function loadAll() {
+  setSyncing();
+  try {
+    const [ar,cr]=await Promise.all([
+      api('GET',`/values/${enc(TAB_APPS+'!A2:G2000')}`),
+      api('GET',`/values/${enc(TAB_CON+'!A2:J2000')}`)
+    ]);
+    apps=(ar.values||[]).map(r=>({id:parseInt(r[0])||0,company:r[1]||'',role:r[2]||'',location:r[3]||'',salary:r[4]||'',dateApplied:r[5]||'',status:r[6]||'Applied'}));
+    contacts=(cr.values||[]).map(r=>({appId:parseInt(r[0])||0,name:r[1]||'',teamTitle:r[2]||'',email:r[3]||'',location:r[4]||'',school:r[5]||'',lastEvent:r[6]||'',lastDate:r[7]||'',cell:r[8]||'',notes:r[9]||''}));
+    nextAppId=apps.length?Math.max(...apps.map(a=>a.id))+1:1;
+    setSynced(); renderAll();
+  } catch(e){setSyncErr();console.error(e);}
+}
+
+async function appendApp(app) {
+  await api('POST',`/values/${enc(TAB_APPS+'!A:G')}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`,{values:[[app.id,app.company,app.role,app.location,app.salary,app.dateApplied,app.status]]});
+}
+async function updateApp(app) {
+  const row=apps.findIndex(a=>a.id===app.id)+2;
+  await api('PUT',`/values/${enc(TAB_APPS+'!A'+row+':G'+row)}?valueInputOption=RAW`,{values:[[app.id,app.company,app.role,app.location,app.salary,app.dateApplied,app.status]]});
+}
+async function deleteAppRow(appId) {
+  const row=apps.findIndex(a=>a.id===appId)+2;
+  await api('POST',':batchUpdate',{requests:[{deleteDimension:{range:{sheetId:sheetMeta.appsId,dimension:'ROWS',startIndex:row-1,endIndex:row}}}]});
+}
+async function syncContacts(appId,newCons) {
+  const r=await api('GET',`/values/${enc(TAB_CON+'!A2:J2000')}`);
+  const rows=r.values||[];
+  const toDel=rows.map((row,i)=>parseInt(row[0])===appId?i+2:null).filter(Boolean);
+  if(toDel.length){
+    const reqs=toDel.sort((a,b)=>b-a).map(ri=>({deleteDimension:{range:{sheetId:sheetMeta.conId,dimension:'ROWS',startIndex:ri-1,endIndex:ri}}}));
+    await api('POST',':batchUpdate',{requests:reqs});
+  }
+  if(newCons.length){
+    await api('POST',`/values/${enc(TAB_CON+'!A:J')}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`,{values:newCons.map(c=>[appId,c.name,c.teamTitle,c.email,c.location,c.school,c.lastEvent,c.lastDate,c.cell,c.notes])});
+  }
+}
+
+async function saveApp() {
+  syncTC();
+  const company=$('f-company').value.trim();
+  if(!company){$('f-company').focus();return;}
+  const obj={id:editingId||nextAppId++,company,role:$('f-role').value.trim(),location:$('f-location').value.trim(),salary:$('f-salary').value.trim(),dateApplied:$('f-date').value,status:$('f-status').value};
+  const savingCons=tempContacts.filter(c=>c.name.trim());
+  $('save-btn').disabled=true; $('save-btn').textContent='Saving…'; setSyncing();
+  try {
+    if(editingId){apps[apps.findIndex(a=>a.id===editingId)]=obj;await updateApp(obj);}
+    else{apps.push(obj);await appendApp(obj);}
+    await syncContacts(obj.id,savingCons);
+    contacts=contacts.filter(c=>c.appId!==obj.id);
+    savingCons.forEach(c=>contacts.push({...c,appId:obj.id}));
+    setSynced(); closeModal(); renderAll();
+    if(drawerAppId===obj.id)renderDrawer(apps.find(a=>a.id===obj.id));
+  } catch(e){setSyncErr();alert('Save failed: '+e.message);}
+  finally{$('save-btn').disabled=false;$('save-btn').textContent='Save to Sheets';}
+}
+
+async function deleteApp(id) {
+  if(!confirm('Delete this application and all its contacts?'))return;
+  setSyncing();
+  try{
+    await deleteAppRow(id);
+    await syncContacts(id,[]);
+    apps=apps.filter(a=>a.id!==id);
+    contacts=contacts.filter(c=>c.appId!==id);
+    setSynced(); renderAll();
+  }catch(e){setSyncErr();alert('Delete failed: '+e.message);}
+}
+
+function renderAll() {
+  renderStats(); renderSidebarStats();
+  if(currentView==='list')renderTable();else renderKanban();
+  if(drawerAppId!==null){const a=apps.find(x=>x.id===drawerAppId);if(a)renderDrawer(a);else closeDrawer();}
+}
+function renderStats() {
+  const t=apps.length,iv=apps.filter(a=>a.status==='Interview').length,of=apps.filter(a=>a.status==='Offer').length,rate=t?Math.round((iv+of)/t*100):0;
+  $('stats-row').innerHTML=`<div class="stat-card"><div class="stat-label">Applications</div><div class="stat-value">${t}</div><div class="stat-sub">total tracked</div></div><div class="stat-card"><div class="stat-label">Contacts reached</div><div class="stat-value">${contacts.length}</div><div class="stat-sub">across ${t} companies</div></div><div class="stat-card"><div class="stat-label">Interviews</div><div class="stat-value">${iv}</div><div class="stat-sub">${rate}% response rate</div></div><div class="stat-card"><div class="stat-label">Offers</div><div class="stat-value">${of}</div><div class="stat-sub">${of?'active':'none yet'}</div></div>`;
+}
+function renderSidebarStats() {
+  const by={};apps.forEach(a=>{by[a.status]=(by[a.status]||0)+1;});
+  $('sidebar-stats').innerHTML=Object.entries(by).map(([k,v])=>`<div class="sidebar-stat"><span>${k}</span><span>${v}</span></div>`).join('');
+}
+function getFiltered() {
+  const q=$('search-input').value.toLowerCase();
+  return apps.filter(a=>{
+    const ms=!activeFilter||a.status===activeFilter;
+    const mq=!q||a.company.toLowerCase().includes(q)||a.role.toLowerCase().includes(q)||conFor(a.id).some(c=>c.name.toLowerCase().includes(q)||c.email.toLowerCase().includes(q));
+    return ms&&mq;
+  });
+}
+function renderFilterBar() {
+  const counts={};apps.forEach(a=>{counts[a.status]=(counts[a.status]||0)+1;});
+  $('filter-bar').innerHTML=`<button class="filter-chip ${!activeFilter?'active':''}" onclick="setFilter('')">All <span style="opacity:.6;margin-left:2px">${apps.length}</span></button>`+STATUSES.map(s=>`<button class="filter-chip ${activeFilter===s?'active':''}" onclick="setFilter('${s}')">${s}${counts[s]?` <span style="opacity:.6;margin-left:2px">${counts[s]}</span>`:''}</button>`).join('');
+}
+function setFilter(f){activeFilter=f;renderFilterBar();renderTable();}
+function renderTable() {
+  renderFilterBar();
+  const filtered=getFiltered();
+  $('table-count').textContent=`${filtered.length} application${filtered.length!==1?'s':''}`;
+  const tb=$('table-body');
+  if(!filtered.length){tb.innerHTML=`<tr><td colspan="8"><div class="empty-state"><div class="empty-title">No applications found</div><div class="empty-sub">${apps.length?'Try adjusting your filters':'Click "+ New application" to get started'}</div></div></td></tr>`;return;}
+  tb.innerHTML=filtered.map(a=>{
+    const cons=conFor(a.id);
+    return `<tr onclick="openDrawer(${a.id})">
+      <td><div class="company-cell"><div class="company-avatar">${ini(a.company)}</div><div><div class="company-name">${esc(a.company)}</div></div></div></td>
+      <td style="color:var(--text2)">${esc(a.role)||'—'}</td>
+      <td style="color:var(--text3);font-size:12px">${esc(a.location)||'—'}</td>
+      <td style="font-family:'DM Mono',monospace;font-size:12px;color:var(--text2)">${esc(a.salary)||'—'}</td>
+      <td>${cons.length?cons.map(c=>`<span class="contact-pill">${esc(c.name)}</span>`).join(''):'<span style="color:var(--text3)">—</span>'}</td>
+      <td style="font-family:'DM Mono',monospace;font-size:12px;color:var(--text3);white-space:nowrap">${fmtDate(a.dateApplied)}</td>
+      <td><span class="badge ${bdg(a.status)}">${esc(a.status)}</span></td>
+      <td><div class="action-cell">
+        <button class="icon-btn" onclick="event.stopPropagation();openEdit(${a.id})" title="Edit"><svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9.5 2.5l2 2L4 12H2v-2L9.5 2.5z"/></svg></button>
+        <button class="icon-btn del" onclick="event.stopPropagation();deleteApp(${a.id})" title="Delete"><svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 4h10M5 4V2.5h4V4M5.5 6.5v4M8.5 6.5v4M3 4l.8 7.5c0 .6.4 1 1 1h4.4c.6 0 1-.4 1-1L11 4"/></svg></button>
+      </div></td>
+    </tr>`;
+  }).join('');
+}
+function renderKanban() {
+  $('kanban-board').innerHTML=STATUSES.map(status=>{
+    const col=apps.filter(a=>a.status===status);
+    return `<div class="kanban-col"><div class="kanban-col-header"><span class="kanban-col-name">${status}</span><span class="kanban-count">${col.length}</span></div><div class="kanban-cards">${col.length?col.map(a=>`<div class="kanban-card" onclick="openDrawer(${a.id})"><div class="kanban-card-company">${esc(a.company)}</div><div class="kanban-card-role">${esc(a.role)||'—'}</div><div class="kanban-card-footer"><span class="kanban-card-date">${fmtDate(a.dateApplied)}</span><span class="kanban-card-contacts">${conFor(a.id).length} contact${conFor(a.id).length!==1?'s':''}</span></div></div>`).join(''):'<div style="font-size:12px;color:var(--text3);text-align:center;padding:14px 0">Empty</div>'}</div></div>`;
+  }).join('');
+}
+function setView(v) {
+  currentView=v;
+  $('view-list').style.display=v==='list'?'':'none';
+  $('view-kanban').style.display=v==='kanban'?'':'none';
+  $('nav-list').className='nav-item'+(v==='list'?' active':'');
+  $('nav-kanban').className='nav-item'+(v==='kanban'?' active':'');
+  $('page-title').textContent=v==='list'?'All applications':'Board view';
+  renderAll();
+}
+
+function openDrawer(id){drawerAppId=id;const a=apps.find(x=>x.id===id);if(!a)return;renderDrawer(a);$('drawer-overlay').classList.add('open');}
+function renderDrawer(a){
+  $('d-company').textContent=a.company;
+  $('d-role').textContent=a.role||'—';
+  const cons=conFor(a.id);
+  $('d-body').innerHTML=`
+    <div class="drawer-section">
+      <div class="drawer-section-title">Company details</div>
+      <div class="meta-grid">
+        <div class="meta-item"><div class="meta-key">Status</div><div class="meta-val"><span class="badge ${bdg(a.status)}">${esc(a.status)}</span></div></div>
+        <div class="meta-item"><div class="meta-key">Date applied</div><div class="meta-val">${fmtDate(a.dateApplied)}</div></div>
+        <div class="meta-item"><div class="meta-key">Location</div><div class="meta-val">${esc(a.location)||'—'}</div></div>
+        <div class="meta-item"><div class="meta-key">Indicated salary</div><div class="meta-val">${esc(a.salary)||'—'}</div></div>
+      </div>
+    </div>
+    <div class="drawer-section">
+      <div class="drawer-section-title">Contacts (${cons.length})</div>
+      ${cons.length?cons.map(c=>`<div class="contact-card">
+        <div class="contact-card-name">${esc(c.name)}</div>
+        <div class="contact-card-title">${esc(c.teamTitle)||'—'}</div>
+        <div class="contact-card-grid">
+          <div><div class="contact-field-label">Email</div><div class="contact-field-val">${esc(c.email)||'—'}</div></div>
+          <div><div class="contact-field-label">Cell</div><div class="contact-field-val">${esc(c.cell)||'—'}</div></div>
+          <div><div class="contact-field-label">Location</div><div class="contact-field-val">${esc(c.location)||'—'}</div></div>
+          <div><div class="contact-field-label">School</div><div class="contact-field-val">${esc(c.school)||'—'}</div></div>
+          <div><div class="contact-field-label">Last contact event</div><div class="contact-field-val">${esc(c.lastEvent)||'—'}</div></div>
+          <div><div class="contact-field-label">Last touchpoint date</div><div class="contact-field-val">${fmtDate(c.lastDate)}</div></div>
+        </div>
+        ${c.notes?`<div style="margin-top:4px"><div class="contact-field-label" style="margin-bottom:4px">Outreach notes</div><div class="contact-note-box">${esc(c.notes)}</div></div>`:''}
+      </div>`).join(''):'<div style="font-size:13px;color:var(--text3)">No contacts added yet</div>'}
+    </div>`;
+}
+function closeDrawer(){drawerAppId=null;$('drawer-overlay').classList.remove('open');}
+function editFromDrawer(){if(drawerAppId!==null)openEdit(drawerAppId);}
+function deleteFromDrawer(){if(drawerAppId!==null){deleteApp(drawerAppId);closeDrawer();}}
+
+const emptyC=()=>({name:'',teamTitle:'',email:'',cell:'',location:'',school:'',lastEvent:'',lastDate:'',notes:''});
+function buildCBlocks(){
+  return tempContacts.map((c,i)=>`<div class="contact-form-block">
+    <div class="contact-form-header"><span class="contact-form-num">Contact ${i+1}</span><button class="remove-contact" onclick="removeContact(${i})">Remove</button></div>
+    <div class="form-row">
+      <div class="field"><label>Name</label><input type="text" id="cn-${i}" value="${esc(c.name)}" placeholder="e.g. Jane Smith"/></div>
+      <div class="field"><label>Team &amp; title</label><input type="text" id="ct-${i}" value="${esc(c.teamTitle)}" placeholder="e.g. Investment Team · Associate"/></div>
+    </div>
+    <div class="form-row">
+      <div class="field"><label>Email</label><input type="email" id="ce-${i}" value="${esc(c.email)}" placeholder="jane@firm.com"/></div>
+      <div class="field"><label>Cell number</label><input type="tel" id="cc-${i}" value="${esc(c.cell)}" placeholder="+1 212 555 0100"/></div>
+    </div>
+    <div class="form-row">
+      <div class="field"><label>Location</label><input type="text" id="cl-${i}" value="${esc(c.location)}" placeholder="e.g. Hong Kong"/></div>
+      <div class="field"><label>School</label><input type="text" id="cs-${i}" value="${esc(c.school)}" placeholder="e.g. Columbia Business School"/></div>
+    </div>
+    <div class="form-row">
+      <div class="field"><label>Last contact event</label><input type="text" id="cle-${i}" value="${esc(c.lastEvent)}" placeholder="e.g. Coffee chat, LinkedIn DM"/></div>
+      <div class="field"><label>Last touchpoint date</label><input type="date" id="cld-${i}" value="${esc(c.lastDate)}"/></div>
+    </div>
+    <div class="form-row single">
+      <div class="field"><label>Outreach notes</label><textarea id="co-${i}" placeholder="Message sent, response received, next steps…">${esc(c.notes)}</textarea></div>
+    </div>
+  </div>`).join('');
+}
+function syncTC(){
+  tempContacts=tempContacts.map((_,i)=>({name:$(`cn-${i}`)?.value||'',teamTitle:$(`ct-${i}`)?.value||'',email:$(`ce-${i}`)?.value||'',cell:$(`cc-${i}`)?.value||'',location:$(`cl-${i}`)?.value||'',school:$(`cs-${i}`)?.value||'',lastEvent:$(`cle-${i}`)?.value||'',lastDate:$(`cld-${i}`)?.value||'',notes:$(`co-${i}`)?.value||''}));
+}
+function refreshCA(){$('contacts-area').innerHTML=buildCBlocks();}
+function addContactField(){syncTC();tempContacts.push(emptyC());refreshCA();}
+function removeContact(i){syncTC();tempContacts.splice(i,1);refreshCA();}
+function openModal(title,app){
+  editingId=app?app.id:null;
+  const existing=app?conFor(app.id):[];
+  tempContacts=existing.length?JSON.parse(JSON.stringify(existing)):[emptyC()];
+  $('modal-title').textContent=title;
+  $('modal-body').innerHTML=`
+    <div class="section-label">Company info</div>
+    <div class="form-row">
+      <div class="field"><label>Company *</label><input type="text" id="f-company" value="${esc(app?.company||'')}" placeholder="e.g. Sequoia Capital"/></div>
+      <div class="field"><label>Role</label><input type="text" id="f-role" value="${esc(app?.role||'')}" placeholder="e.g. Associate"/></div>
+    </div>
+    <div class="form-row three">
+      <div class="field"><label>Location</label><input type="text" id="f-location" value="${esc(app?.location||'')}" placeholder="e.g. Hong Kong"/></div>
+      <div class="field"><label>Indicated salary</label><input type="text" id="f-salary" value="${esc(app?.salary||'')}" placeholder="e.g. HKD 600K–800K"/></div>
+      <div class="field"><label>Date applied</label><input type="date" id="f-date" value="${esc(app?.dateApplied||'')}"/></div>
+    </div>
+    <div class="form-row single" style="margin-bottom:0">
+      <div class="field"><label>Status</label><select id="f-status">${STATUSES.map(s=>`<option value="${s}"${app?.status===s?' selected':''}>${s}</option>`).join('')}</select></div>
+    </div>
+    <hr class="form-divider"/>
+    <div class="section-label">Contacts &amp; outreach</div>
+    <div id="contacts-area">${buildCBlocks()}</div>
+    <button class="add-contact-btn" onclick="addContactField()">+ Add another contact</button>
+  `;
+  $('modal-overlay').classList.add('open');
+}
+function openAdd(){openModal('New application',null);}
+function openEdit(id){openModal('Edit application',apps.find(a=>a.id===id));}
+function closeModal(){$('modal-overlay').classList.remove('open');editingId=null;}
+function handleModalBg(e){if(e.target===$('modal-overlay'))closeModal();}
+</script>
+</body>
+</html>
